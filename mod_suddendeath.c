@@ -3,15 +3,14 @@
 #include <http_config.h>
 #include <http_log.h>
 #include <stdlib.h>
-
-#ifdef _WIN32
 #include <wchar.h>
-struct interval {
+
+struct _interval {
   unsigned short first;
   unsigned short last;
 };
 
-static int bisearch(wchar_t ucs, const struct interval *table, int max) {
+static int _bisearch(wchar_t ucs, const struct _interval *table, int max) {
   int min = 0;
   int mid;
   if (ucs < table[0].first || ucs > table[max].last)
@@ -28,8 +27,8 @@ static int bisearch(wchar_t ucs, const struct interval *table, int max) {
   return 0;
 }
 
-static int wcwidth(wchar_t ucs) {
-  static const struct interval combining[] = {
+static int _wcwidth(wchar_t ucs) {
+  static const struct _interval combining[] = {
     { 0x0300, 0x034E }, { 0x0360, 0x0362 }, { 0x0483, 0x0486 },
     { 0x0488, 0x0489 }, { 0x0591, 0x05A1 }, { 0x05A3, 0x05B9 },
     { 0x05BB, 0x05BD }, { 0x05BF, 0x05BF }, { 0x05C1, 0x05C2 },
@@ -71,8 +70,8 @@ static int wcwidth(wchar_t ucs) {
   if (ucs < 32 || (ucs >= 0x7f && ucs < 0xa0))
     return -1;
 
-  if (bisearch(ucs, combining,
-      sizeof(combining) / sizeof(struct interval) - 1))
+  if (_bisearch(ucs, combining,
+      sizeof(combining) / sizeof(struct _interval) - 1))
     return 0;
 
   return 1 + 
@@ -87,17 +86,6 @@ static int wcwidth(wchar_t ucs) {
       (ucs >= 0xffe0 && ucs <= 0xffe6) ||
       (ucs >= 0x20000 && ucs <= 0x2ffff)));
 }
-
-static int wcswidth(const wchar_t *pwcs, size_t n) {
-  int w, width = 0;
-  for (;*pwcs && n-- > 0; pwcs++)
-    if ((w = wcwidth(*pwcs)) < 0)
-      return -1;
-    else
-      width += w;
-  return width;
-}
-#endif
 
 static char utf8len_tab[256] = {
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -175,16 +163,21 @@ module AP_MODULE_DECLARE_DATA suddendeath_module;
 
 static int utf_strwidth(const char* s, int l) {
   int maxwidth = 0, width = 0, i;
-  const char* p = s;
+  const unsigned char* p = s;
   while (*p) {
     if (*p == '\n')
       width = 0;
     else
-      width += wcwidth(utf_ptr2char((unsigned char*) p));
+      width += _wcwidth(utf_ptr2char(p));
     if (maxwidth < width)
       maxwidth = width;
-    p += utf_ptr2len((unsigned char*) p);
-    if (l != -1 && p - s > l) break;
+	{
+		FILE* fp = fopen("/tmp/foo.log", "a");
+		fprintf(fp, "%s, %d, %d\n", p, width, utf_ptr2char(p));
+		fclose(fp);
+	}
+    p += utf_ptr2len(p);
+    if (l != -1 && (char*)p - (char*)s > l) break;
   }
   return maxwidth;
 }
