@@ -171,11 +171,6 @@ static int utf_strwidth(const char* s, int l) {
       width += _wcwidth(utf_ptr2char(p));
     if (maxwidth < width)
       maxwidth = width;
-	{
-		FILE* fp = fopen("/tmp/foo.log", "a");
-		fprintf(fp, "%s, %d, %d\n", p, width, utf_ptr2char(p));
-		fclose(fp);
-	}
     p += utf_ptr2len(p);
     if (l != -1 && (char*)p - (char*)s > l) break;
   }
